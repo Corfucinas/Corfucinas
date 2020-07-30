@@ -15,10 +15,11 @@ jobs:
         with:
           WAKATIME_API_KEY: ${{ secrets.WAKATIME_API_KEY }}
           USERNAME: Corfucinas
+          SHOW_TITLE: true
+          SHOW_LINES_OF_CODE: true
           HEAD_FLAG: true
           SHOW_OS: true
           SHOW_PROJECTS: true
-          SHOW_LINES_OF_CODE: true
           SHOW_COMMIT: true
           SHOW_LANGUAGE: true
           SHOW_EDITORS : true
