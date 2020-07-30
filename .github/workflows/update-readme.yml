@@ -11,14 +11,13 @@ jobs:
     name: Update this repo's README
     runs-on: ubuntu-latest
     steps:
-      - uses: anmol098/waka-readme-stats@V1
+      - uses: anmol098/waka-readme-stats@master
         with:
           WAKATIME_API_KEY: ${{ secrets.WAKATIME_API_KEY }}
           USERNAME: Corfucinas
-          SHOW_LINES_OF_CODE: true
-          HEAD_FLAG: true
-          SHOW_OS: true
-          SHOW_PROJECTS: true
-          SHOW_COMMIT: true
-          SHOW_LANGUAGE: true
-          SHOW_EDITORS : true
+          SHOW_LINES_OF_CODE: "True"
+          SHOW_OS: "True"
+          SHOW_PROJECTS: "True"
+          SHOW_COMMIT: "True"
+          SHOW_LANGUAGE: "True"
+          SHOW_EDITORS : "True"
