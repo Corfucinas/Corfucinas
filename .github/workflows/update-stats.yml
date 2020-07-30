@@ -21,4 +21,5 @@ jobs:
           SHOW_PROJECTS: "True"
           SHOW_COMMIT: "True"
           SHOW_LANGUAGE: "True"
-          SHOW_EDITORS : "True"
+          SHOW_EDITORS: "True"
+          SHOW_TIMEZONE: "True"
