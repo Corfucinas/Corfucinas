@@ -1,6 +1,8 @@
 # Welcome 👋
 
 [![Linkedin Badge](https://img.shields.io/badge/-PedroTorres-blue?style=flat-square&logo=Linkedin&logoColor=white&link=https://www.linkedin.com/in/PedroTorres/)](https://www.linkedin.com/in/pedro-torres-cruz/)
+[![Leetcode](https://img.shields.io/badge/profile-leetcode-green)](https://leetcode.com/corfucinas/)
+[![Tryhackme](https://img.shields.io/badge/profile-tryhackme-blue)](https://tryhackme.com/p/Corfucinas/)
 
 ---
 
