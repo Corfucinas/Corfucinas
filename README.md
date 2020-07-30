@@ -1,9 +1,9 @@
 # Welcome 👋
 
 [![Linkedin Badge](https://img.shields.io/badge/-PedroTorres-blue?style=flat-square&logo=Linkedin&logoColor=white&link=https://www.linkedin.com/in/PedroTorres/)](https://www.linkedin.com/in/pedro-torres-cruz/)
-[![Leetcode](https://img.shields.io/badge/profile-leetcode-green)](https://leetcode.com/corfucinas/)
-[![Tryhackme](https://img.shields.io/badge/profile-tryhackme-blue)](https://tryhackme.com/p/Corfucinas/)
-
+[![Leetcode Badge](https://img.shields.io/badge/profile-leetcode-green)](https://leetcode.com/corfucinas/)
+[![Tryhackme Badge](https://img.shields.io/badge/profile-tryhackme-blue)](https://tryhackme.com/p/Corfucinas/)
+[![Lichess Badge](https://img.shields.io/badge/challenge_me-lichess-yellow)](https://lichess.org/@/Corfucinas)
 ---
 
 <!--START_SECTION:waka-->
