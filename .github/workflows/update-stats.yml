@@ -15,7 +15,6 @@ jobs:
         with:
           WAKATIME_API_KEY: ${{ secrets.WAKATIME_API_KEY }}
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
-          USERNAME: Corfucinas
           SHOW_LINES_OF_CODE: "True"
           SHOW_OS: "True"
           SHOW_PROJECTS: "True"
