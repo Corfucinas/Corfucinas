@@ -4,7 +4,7 @@
 [![Leetcode Badge](https://img.shields.io/badge/profile-leetcode-green)](https://leetcode.com/corfucinas/)
 [![Tryhackme Badge](https://img.shields.io/badge/profile-tryhackme-blue)](https://tryhackme.com/p/Corfucinas/)
 [![Lichess Badge](https://img.shields.io/badge/challenge_me-lichess-yellow)](https://lichess.org/@/Corfucinas)
-[![Hack the box](https://img.shields.io/badge/hack_the_box-profile-yellow)](https://www.hackthebox.eu/profile/375826)
+[![Hack the box](https://img.shields.io/badge/hack_the_box-profile-red)](https://www.hackthebox.eu/profile/375826)
 
 ---
 
