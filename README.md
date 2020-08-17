@@ -9,23 +9,23 @@
 ---
 
 <!--START_SECTION:waka-->
-![Profile Views](http://img.shields.io/badge/Profile%20Views-73-blue)
+![Profile Views](http://img.shields.io/badge/Profile%20Views-18-blue)
 
-![Lines of code](https://img.shields.io/badge/From%20Hello%20World%20I've%20written-12.0%20million%20Lines%20of%20code-blue)
+![Lines of code](https://img.shields.io/badge/From%20Hello%20World%20I%27ve%20Written-11.7%20million%20Lines%20of%20code-blue)
 
-**🐱 My GitHub Data** 
+**🐱 My Github Data** 
 
-> 🏆 1,154 Contributions in year 2020
+> 🏆 1,154 Contributions in the year 2020
  > 
-> 📦 Used 0 Bytes in GitHub's Storage 
+> 📦 0 Bytes Used in Github's Storage 
  > 
 > 💼 Opted to Hire
  > 
-> 📜 67 Public Repositories 
+> 📜 67 Public repositories
  > 
-> 🔑 0 Owned Private Repository 
+> 🔑 0 Private repository 
  > 
-**I'm an early 🐤** 
+**I'm an Early 🐤** 
 
 ```text
 🌞 Morning    67 commits     ██░░░░░░░░░░░░░░░░░░░░░░░   10.04% 
@@ -34,7 +34,7 @@
 🌙 Night      41 commits     █░░░░░░░░░░░░░░░░░░░░░░░░   6.15%
 
 ```
-📅 **I'm Most Productive on Fridays** 
+📅 **I'm Most Productive on Friday** 
 
 ```text
 Monday       93 commits     ███░░░░░░░░░░░░░░░░░░░░░░   13.94% 
@@ -48,19 +48,19 @@ Sunday       43 commits     █░░░░░░░░░░░░░░░░�
 ```
 
 
-📊 **This week I spent my time on** 
+📊 **This Week I Spend My Time On** 
 
 ```text
-⌚︎ Timezone: Asia/Shanghai
+⌚︎ Time zone: Asia/Shanghai
 
-💬 Languages: 
+💬 Programming Languages: 
 Markdown                 4 hrs 29 mins       █████████████░░░░░░░░░░░░   52.73% 
 Python                   1 hr 39 mins        █████░░░░░░░░░░░░░░░░░░░░   19.52% 
 JSON                     45 mins             ██░░░░░░░░░░░░░░░░░░░░░░░   8.91% 
 Text                     32 mins             █░░░░░░░░░░░░░░░░░░░░░░░░   6.27% 
 Other                    26 mins             █░░░░░░░░░░░░░░░░░░░░░░░░   5.25%
 
-🔥 Editors: 
+🔥 Code Editors: 
 VS Code                  8 hrs 30 mins       █████████████████████████   100.0%
 
 🐱‍💻 Projects: 
@@ -70,12 +70,12 @@ Trigoniko                1 hr 3 mins         ███░░░░░░░░�
 selenium-automation      27 mins             █░░░░░░░░░░░░░░░░░░░░░░░░   5.29% 
 dotfiles                 7 mins              ░░░░░░░░░░░░░░░░░░░░░░░░░   1.51%
 
-💻 Operating Systems: 
+💻 Operating System: 
 Windows                  8 hrs 30 mins       █████████████████████████   100.0%
 
 ```
 
-**I mostly code in Python** 
+**I Mostly Code in Python** 
 
 ```text
 Python                   9 repos             ██████░░░░░░░░░░░░░░░░░░░   26.47% 
