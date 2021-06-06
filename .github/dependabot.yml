@@ -1,0 +1,13 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 99
+    target-branch: master
+    labels:
+      - github-actions
+      - dependabot
+    commit-message:
+      prefix: chore
