@@ -21,7 +21,7 @@ npx mr-torres
 
 > 🏆 630 Contributions in the Year 2022
  > 
-> 📦 282.6 kB Used in Github's Storage 
+> 📦 277.5 kB Used in Github's Storage 
  > 
 > 💼 Opted to Hire
  > 
@@ -42,5 +42,5 @@ Java                     3 repos             █░░░░░░░░░░�
 
 
 
- Last Updated on 16/05/2022
+ Last Updated on 17/05/2022
 <!--END_SECTION:waka-->
