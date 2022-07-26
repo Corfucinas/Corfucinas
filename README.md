@@ -15,13 +15,13 @@ npx mr-torres
 ---
 
 <!--START_SECTION:waka-->
-![Lines of code](https://img.shields.io/badge/From%20Hello%20World%20I%27ve%20Written-1.8%20million%20lines%20of%20code-blue)
+![Lines of code](https://img.shields.io/badge/From%20Hello%20World%20I%27ve%20Written-1.7%20million%20lines%20of%20code-blue)
 
 **🐱 My Github Data** 
 
-> 🏆 659 Contributions in the Year 2022
+> 🏆 660 Contributions in the Year 2022
  > 
-> 📦 281.9 kB Used in Github's Storage 
+> 📦 282.5 kB Used in Github's Storage 
  > 
 > 💼 Opted to Hire
  > 
@@ -29,18 +29,18 @@ npx mr-torres
  > 
 > 🔑 6 Private Repositories  
  > 
-**I Mostly Code in JavaScript** 
+**I Mostly Code in Python** 
 
 ```text
-JavaScript               10 repos            █████░░░░░░░░░░░░░░░░░░░░   21.28% 
-Python                   9 repos             ████░░░░░░░░░░░░░░░░░░░░░   19.15% 
-HTML                     8 repos             ████░░░░░░░░░░░░░░░░░░░░░   17.02% 
-Rust                     5 repos             ██░░░░░░░░░░░░░░░░░░░░░░░   10.64% 
-Java                     3 repos             █░░░░░░░░░░░░░░░░░░░░░░░░   6.38%
+Python                   9 repos             █████░░░░░░░░░░░░░░░░░░░░   20.0% 
+JavaScript               9 repos             █████░░░░░░░░░░░░░░░░░░░░   20.0% 
+HTML                     8 repos             ████░░░░░░░░░░░░░░░░░░░░░   17.78% 
+Rust                     5 repos             ██░░░░░░░░░░░░░░░░░░░░░░░   11.11% 
+Java                     2 repos             █░░░░░░░░░░░░░░░░░░░░░░░░   4.44%
 
 ```
 
 
 
- Last Updated on 25/07/2022
+ Last Updated on 26/07/2022
 <!--END_SECTION:waka-->
