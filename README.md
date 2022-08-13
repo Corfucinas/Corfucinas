@@ -15,11 +15,11 @@ npx mr-torres
 ---
 
 <!--START_SECTION:waka-->
-![Lines of code](https://img.shields.io/badge/From%20Hello%20World%20I%27ve%20Written-1.7%20million%20lines%20of%20code-blue)
+![Lines of code](https://img.shields.io/badge/From%20Hello%20World%20I%27ve%20Written-1.8%20million%20lines%20of%20code-blue)
 
 **🐱 My Github Data** 
 
-> 🏆 678 Contributions in the Year 2022
+> 🏆 711 Contributions in the Year 2022
  > 
 > 📦 278.3 kB Used in Github's Storage 
  > 
@@ -42,5 +42,5 @@ Java                     2 repos             █░░░░░░░░░░�
 
 
 
- Last Updated on 12/08/2022
+ Last Updated on 13/08/2022
 <!--END_SECTION:waka-->
