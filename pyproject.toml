@@ -1,15 +1,17 @@
-[tool.poetry]
-authors = ["Corfucinas <53630064+Corfucinas@users.noreply.github.com>"]
-description = ""
-name = "corfucinas"
-version = "0.1.0"
+[project]
+name = "corfucinas-profile"
+version = "1.0.0"
+description = "Animated GitHub profile cards rendered daily from live stats"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.11"
+dependencies = [] # the generator is stdlib-only
 
-[tool.poetry.dependencies]
-python = "^3.9"
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.6", "pre-commit>=3.8"]
 
-[tool.poetry.dev-dependencies]
-pre-commit = "^2.13.0"
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
-[build-system]
-build-backend = "poetry.core.masonry.api"
-requires = ["poetry-core>=1.0.0"]
+[tool.ruff]
+target-version = "py311"

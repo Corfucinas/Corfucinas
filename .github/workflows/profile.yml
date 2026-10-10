@@ -5,7 +5,7 @@ on:
     - cron: "17 3 * * *" # daily, off the top of the hour to avoid the scheduler rush
   workflow_dispatch:
   push:
-    branches: [master]
+    branches: [main]
     paths: ["scripts/**", "fonts/**", ".github/workflows/profile.yml"]
 
 permissions:
