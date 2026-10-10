@@ -1,46 +1,14 @@
-# Welcome 👋
+<div align="center">
 
-[![Linkedin Badge](https://img.shields.io/badge/-PedroTorres-blue?style=flat-square&logo=Linkedin&logoColor=white&link=https://www.linkedin.com/in/PedroTorres/)](https://www.linkedin.com/in/pedro-torres-cruz/)
-[![Leetcode Badge](https://img.shields.io/badge/profile-leetcode-green)](https://leetcode.com/corfucinas/)
-[![Tryhackme Badge](https://img.shields.io/badge/profile-tryhackme-blue)](https://tryhackme.com/p/Corfucinas/)
-[![Lichess Badge](https://img.shields.io/badge/challenge_me-lichess-yellow)](https://lichess.org/@/Corfucinas)
-[![Hack the box](https://img.shields.io/badge/hack_the_box-profile-red)](https://www.hackthebox.eu/profile/375826)
+<img src="assets/header.svg" width="840" alt="Pedro Torres. I build, launch, and grow new ventures. Animated synthwave header with a sunset over wireframe mountains and a typing terminal line.">
 
-Want to connect quickly?
+<img src="assets/stats.svg" width="840" alt="Total GitHub contributions over the last 12 months and all-time, with current streak, pull requests, issues, repositories, commits and time on GitHub.">
 
-```javascript
-npx mr-torres
-```
+<img src="assets/languages.svg" width="840" alt="Languages by bytes across my original repositories: a stacked bar with the share of each language.">
 
----
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Corfucinas/Corfucinas/output/github-snake-dark.svg">
+  <img src="https://raw.githubusercontent.com/Corfucinas/Corfucinas/output/github-snake.svg" width="840" alt="Contribution graph being eaten by a snake.">
+</picture>
 
-<!--START_SECTION:waka-->
-![Lines of code](https://img.shields.io/badge/From%20Hello%20World%20I%27ve%20Written-1.7%20million%20lines%20of%20code-blue)
-
-**🐱 My Github Data** 
-
-> 🏆 924 Contributions in the Year 2022
- > 
-> 📦 285.2 kB Used in Github's Storage 
- > 
-> 💼 Opted to Hire
- > 
-> 📜 91 Public Repositories 
- > 
-> 🔑 6 Private Repositories  
- > 
-**I Mostly Code in Python** 
-
-```text
-Python                   10 repos            █████░░░░░░░░░░░░░░░░░░░░   21.74% 
-JavaScript               9 repos             █████░░░░░░░░░░░░░░░░░░░░   19.57% 
-HTML                     8 repos             ████░░░░░░░░░░░░░░░░░░░░░   17.39% 
-Rust                     5 repos             ██░░░░░░░░░░░░░░░░░░░░░░░   10.87% 
-Java                     2 repos             █░░░░░░░░░░░░░░░░░░░░░░░░   4.35%
-
-```
-
-
-
- Last Updated on 25/10/2022
-<!--END_SECTION:waka-->
+</div>
