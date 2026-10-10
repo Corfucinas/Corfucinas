@@ -433,9 +433,9 @@ def count_up(t: dict, value: int, x: float, y: float, fmt: Callable[[int], str] 
         css = (f"animation-delay:{start + k * step:.2f}s" if last
                else f"opacity:0;animation:flash {step}s linear {start + k * step:.2f}s 1")
         val = round(value * (1 - (1 - k / frames) ** 3))
-        out.append(f'<text{" class=\"on\"" if last else ""} x="{left:.1f}" y="{y}" font-size="{size}" '
-                   f'font-family="{t["font_display"]}" fill="url(#g)" style="{css}"'
-                   f'{"" if last else " aria-hidden=\"true\""}>{fmt(val)}</text>')
+        cls, hidden = (' class="on"', "") if last else ("", ' aria-hidden="true"')  # only the settled value is read aloud
+        out.append(f'<text{cls} x="{left:.1f}" y="{y}" font-size="{size}" '
+                   f'font-family="{t["font_display"]}" fill="url(#g)" style="{css}"{hidden}>{fmt(val)}</text>')
     return f'<g{GLOW}>{"".join(out)}</g>'
 
 
