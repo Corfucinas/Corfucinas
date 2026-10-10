@@ -1,0 +1,123 @@
+"""Offline tests for the profile card generator (no network, fixed data)."""
+
+import sys
+import xml.etree.ElementTree as ET
+from datetime import date
+from pathlib import Path
+
+import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+
+import generate_profile as gp
+
+TODAY = date(2026, 10, 10)
+SVG_NS = "{http://www.w3.org/2000/svg}"
+
+
+@pytest.fixture
+def stats() -> gp.Stats:
+    return gp.Stats(
+        created=date(2019, 8, 1),
+        last_year=15_747,
+        all_time=27_197,
+        commits=10_632,
+        prs=477,
+        issues=119,
+        repos=69,
+        days=tuple([0] * 300 + [3] * 64 + [0]),  # 64-day streak; today still at zero
+        languages=(("Python", "#3572A5", 47.4), ("Rust", "#dea584", 23.1), ("C", "#555555", 29.5)),
+    )
+
+
+@pytest.fixture
+def cards(stats: gp.Stats) -> dict[str, str]:
+    return gp.render_all(stats, TODAY)
+
+
+@pytest.mark.parametrize(("n", "expected"), [(0, "0"), (999, "999"), (1000, "1k"), (10_632, "10.6k"), (27_197, "27.2k")])
+def test_fmt_k(n: int, expected: str) -> None:
+    assert gp.fmt_k(n) == expected
+
+
+def test_streaks_ignore_a_quiet_today() -> None:
+    assert gp.streaks((1, 1, 0, 2, 2, 2, 0)) == (3, 3)
+    assert gp.streaks((0, 0)) == (0, 0)
+
+
+def test_uptime() -> None:
+    assert gp.uptime(date(2019, 8, 1), TODAY) == "7y 2m"
+
+
+def test_aggregate_languages_excludes_markup_and_folds_the_tail() -> None:
+    def repo(*langs: tuple[str, int]) -> dict:
+        return {"languages": {"edges": [{"size": s, "node": {"name": n, "color": None}} for n, s in langs]}}
+
+    out = gp.aggregate_languages([repo(("Python", 600), ("HTML", 9_000)), repo(("Rust", 300), ("Go", 100))], top=2)
+    names = [n for n, _, _ in out]
+    assert names == ["Python", "Rust", "Other"]
+    assert "HTML" not in names
+    assert sum(p for _, _, p in out) == pytest.approx(100)
+
+
+def test_every_card_is_well_formed_svg_with_an_accessible_title(cards: dict[str, str]) -> None:
+    assert set(cards) == {"header.svg", "stats.svg", "languages.svg"}
+    for svg in cards.values():
+        root = ET.fromstring(svg)
+        assert root.tag == f"{SVG_NS}svg"
+        assert root.get("role") == "img"
+        title = root.find(f"{SVG_NS}title")
+        assert title is not None and title.text
+
+
+def test_cards_are_safe_for_github_camo(cards: dict[str, str]) -> None:
+    for svg in cards.values():
+        lowered = svg.lower()
+        assert "<script" not in lowered
+        assert "href=\"http" not in lowered and "url(http" not in lowered  # no external fetches
+
+
+def test_text_meets_wcag_aa() -> None:
+    assert gp.text_audit(gp.THEME) >= gp.AA
+
+
+def test_language_marks_meet_non_text_contrast() -> None:
+    surfaces = gp.surfaces(gp.THEME)
+    fill = gp.lang_fill(gp.THEME, "#555555").split('"')[1]
+    assert min(gp.contrast(fill, s) for s in surfaces) >= gp.AA_LARGE
+
+
+def test_stats_row_shows_real_commits_not_stars(stats: gp.Stats) -> None:
+    row = dict(gp.stat_row(stats, TODAY))
+    assert row["COMMITS"] == "10.6k"
+    assert "STARS" not in row
+    assert list(row) == ["STREAK", "PRS", "ISSUES", "REPOS", "COMMITS", "UPTIME"]
+
+
+def test_stats_card_shows_both_totals(cards: dict[str, str]) -> None:
+    svg = cards["stats.svg"]
+    assert ">15,747</text>" in svg and ">27.2k</text>" in svg
+    assert "LAST 12 MONTHS" in svg and "ALL-TIME" in svg
+
+
+def test_header_has_subtitle_and_no_kicker(cards: dict[str, str]) -> None:
+    svg = cards["header.svg"]
+    assert gp.TAGLINE in svg
+    assert "MARKETS" not in svg
+
+
+def test_each_card_embeds_only_the_fonts_it_uses(cards: dict[str, str]) -> None:
+    assert "font-family:'Chakra Petch';font-weight:700" not in cards["header.svg"]
+    assert "font-family:'Audiowide'" not in cards["languages.svg"]
+    assert "font-family:'Chakra Petch'" not in cards["stats.svg"]
+
+
+def test_typing_glyphs_exist_in_vt323(stats: gp.Stats) -> None:
+    # The latin VT323 subset has no → or ❯; those would silently fall back to a system font.
+    assert not any(ch in line for line in gp.typing_lines(stats) for ch in "→❯")
+
+
+def test_private_repo_names_never_leave_fetch(cards: dict[str, str]) -> None:
+    # Only aggregate language names are rendered; the fixture has no repo names, and no card should invent any.
+    for svg in cards.values():
+        assert "nameWithOwner" not in svg
