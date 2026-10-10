@@ -7,6 +7,4 @@ repos:
     -   id: check-case-conflict
     -   id: check-docstring-first
     -   id: check-toml
-    -   id: double-quote-string-fixer
-    -   id: fix-encoding-pragma
     -   id: debug-statements

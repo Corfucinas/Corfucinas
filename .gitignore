@@ -139,3 +139,7 @@ cython_debug/
 
 # Vscode settings
 .vscode
+
+# Local tooling
+.playwright-mcp/
+.codegraph/
