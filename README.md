@@ -6,9 +6,4 @@
 
 <img src="assets/languages.svg" width="840" alt="Languages by bytes across my original repositories: a stacked bar with the share of each language.">
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Corfucinas/Corfucinas/output/github-snake-dark.svg">
-  <img src="https://raw.githubusercontent.com/Corfucinas/Corfucinas/output/github-snake.svg" width="840" alt="Contribution graph being eaten by a snake.">
-</picture>
-
 </div>
