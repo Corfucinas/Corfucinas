@@ -44,6 +44,7 @@ jobs:
       - uses: Platane/snk/svg-only@v3
         with:
           github_user_name: ${{ github.repository_owner }}
+          github_token: ${{ secrets.PROFILE_PAT }} # owner token: the snake includes private activity without the profile toggle
           outputs: |
             dist/github-snake.svg
             dist/github-snake-dark.svg?palette=github-dark
