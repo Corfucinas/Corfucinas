@@ -20,7 +20,7 @@ jobs:
     name: Render stat cards
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           token: ${{ secrets.PROFILE_PAT }} # pushes made with a PAT count as activity, so the schedule never auto-disables
       - uses: actions/setup-python@v5
