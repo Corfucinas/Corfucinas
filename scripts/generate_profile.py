@@ -11,7 +11,10 @@ from __future__ import annotations
 import base64
 import json
 import os
+import shutil
+import subprocess
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -37,7 +40,14 @@ AA, AA_LARGE = 4.5, 3.0  # WCAG 2.x contrast minimums: body text, large text / m
 GLOW = ' filter="url(#glow)"'
 RETRIES = 3  # transient network/API failures; a failed run leaves yesterday's cards up
 DISPLAY_ADV = {"0": 0.925, "1": 0.354, "2": 0.752, "3": 0.719, "4": 0.773, "5": 0.75, "6": 0.744, "7": 0.641,
-               "8": 0.746, "9": 0.744, ",": 0.225, ".": 0.205, "k": 0.691}  # Audiowide advances (em), measured with fonttools
+               "8": 0.746, "9": 0.744, ",": 0.225, ".": 0.205, "k": 0.691, "M": 0.962}  # Audiowide advances (em), measured with fonttools
+# Not "code" for the LOC/FILES count: markup, data, docs and config formats as scc names them.
+NON_CODE = EXCLUDED_LANGUAGES | frozenset({
+    "JSON", "JSONL", "YAML", "TOML", "XML", "SVG", "CSV", "TSV", "Markdown", "ReStructuredText", "Plain Text",
+    "Text", "License", "Jupyter", "Org", "AsciiDoc", "LaTeX", "TeX", "INI", "Properties File", "gitignore",
+})
+MAX_FILE = 512_000  # bytes; larger files are data, binaries or generated output, not hand-written code
+SCC_EXCLUDE_DIRS = "vendor,node_modules,dist,build,.venv,venv,third_party,target,site-packages"
 TAGLINE = "I build, launch, and grow new ventures."
 
 
@@ -111,6 +121,8 @@ class Stats:
     commits: int
     prs: int
     issues: int
+    files: int  # source files across owned repos, counted by scc
+    loc: int  # code lines (no blanks or comments), counted by scc
     repos: int
     days: tuple[int, ...]  # daily counts, oldest first (rolling year)
     languages: tuple[tuple[str, str, float], ...]  # (name, color, percent)
@@ -141,11 +153,12 @@ def graphql(token: str, query: str, **variables: object) -> dict:
 
 
 def fetch_repos(token: str) -> list[dict]:
-    """Owned, non-fork repos (public and private). Only language sizes are read; names never leave this function."""
+    """Owned, non-fork repos (public and private). nameWithOwner is used only to clone for the code count;
+    it is never logged or rendered."""
     query = """query($login:String!,$after:String){user(login:$login){
       repositories(first:100,after:$after,ownerAffiliations:OWNER,isFork:false){
         pageInfo{hasNextPage endCursor}
-        nodes{languages(first:20){edges{size node{name color}}}}}}}"""
+        nodes{nameWithOwner languages(first:20){edges{size node{name color}}}}}}}"""
     nodes, after = [], None
     while True:
         page = graphql(token, query, login=LOGIN, after=after)["repositories"]
@@ -168,6 +181,7 @@ def fetch_stats(token: str) -> Stats:
     )
     per_year = graphql(token, f"query($login:String!){{user(login:$login){{{years}}}}}", login=LOGIN)
     repos = fetch_repos(token)
+    files, loc = count_code(token, repos)
     calendar = user["contributionsCollection"]["contributionCalendar"]
     return Stats(
         created=created,
@@ -176,10 +190,57 @@ def fetch_stats(token: str) -> Stats:
         commits=sum(v["totalCommitContributions"] for v in per_year.values()),
         prs=user["pullRequests"]["totalCount"],
         issues=user["issues"]["totalCount"],
+        files=files,
+        loc=loc,
         repos=len(repos),
         days=tuple(d["contributionCount"] for w in calendar["weeks"] for d in w["contributionDays"]),
         languages=aggregate_languages(repos),
     )
+
+
+def sum_scc(rows: list[dict]) -> tuple[int, int]:
+    """(files, code lines) from scc's JSON, skipping markup/data/docs so only real source counts."""
+    code = [r for r in rows if r["Name"] not in NON_CODE]
+    return sum(r["Count"] for r in code), sum(r["Code"] for r in code)
+
+
+def count_code(token: str, repos: list[dict]) -> tuple[int, int]:
+    """Count source across every owned repo with scc. Each repo is partially cloned (files <= MAX_FILE only: bigger
+    ones are data, binaries or generated output) into an index-named dir. The token travels in git's env config,
+    never argv, and failures are counted, never echoed, so neither the token nor a repo name can reach a log."""
+    if shutil.which("scc") is None:
+        sys.exit("scc is not installed (https://github.com/boyter/scc); the workflow installs it.")
+    auth = base64.b64encode(f"x-access-token:{token}".encode()).decode()
+    env = {**os.environ, "GIT_LFS_SKIP_SMUDGE": "1", "GIT_TERMINAL_PROMPT": "0", "GIT_NO_LAZY_FETCH": "1",
+           "GIT_CONFIG_COUNT": "1", "GIT_CONFIG_KEY_0": "http.extraheader", "GIT_CONFIG_VALUE_0": f"Authorization: Basic {auth}"}
+    skipped = 0
+    with tempfile.TemporaryDirectory() as tmp:
+        for i, repo in enumerate(repos):
+            if not _checkout_small_files(f"https://github.com/{repo['nameWithOwner']}.git", Path(tmp, str(i)), env):
+                skipped += 1
+        if skipped:
+            print(f"code count: skipped {skipped} of {len(repos)} repos (empty or unavailable)", file=sys.stderr)
+        out = subprocess.run(["scc", "--no-min-gen", "--format", "json", "--exclude-dir", SCC_EXCLUDE_DIRS, tmp],
+                             capture_output=True, check=True, text=True, timeout=600)
+    return sum_scc(json.loads(out.stdout))
+
+
+def _checkout_small_files(url: str, dest: Path, env: dict[str, str]) -> bool:
+    """Shallow, blob-filtered clone, then check out only the blobs that were downloaded. False on any failure."""
+    def git(*args: str, stdin: bytes | None = None) -> bytes:
+        return subprocess.run(["git", *args], env=env, input=stdin, capture_output=True, check=True, timeout=300).stdout
+
+    try:
+        git("clone", "--depth", "1", "--single-branch", "--no-checkout", "--quiet",
+            f"--filter=blob:limit={MAX_FILE}", url, str(dest))
+        entries = git("-C", str(dest), "ls-tree", "-r", "-l", "-z", "HEAD").split(b"\0")
+        paths = [e.split(b"\t", 1)[1] for e in entries
+                 if b"\t" in e and e.split()[1] == b"blob" and e.split()[3].isdigit() and int(e.split()[3]) <= MAX_FILE]
+        if paths:
+            git("-C", str(dest), "checkout", "HEAD", "--pathspec-from-file=-", "--pathspec-file-nul", stdin=b"\0".join(paths))
+        return True
+    except (subprocess.SubprocessError, OSError, IndexError):  # never re-raise: the error would carry the repo URL
+        return False
 
 
 def aggregate_languages(
@@ -205,6 +266,8 @@ def aggregate_languages(
 # --- derived metrics -----------------------------------------------------------
 
 def fmt_k(n: int) -> str:
+    if n >= 1_000_000:
+        return f"{n / 1_000_000:.1f}M".replace(".0M", "M")
     return f"{n / 1000:.1f}k".replace(".0k", "k") if n >= 1000 else str(n)
 
 
@@ -460,7 +523,7 @@ def stat_row(stats: Stats, today: date) -> list[tuple[str, str]]:
 
 
 def render_stats(stats: Stats, t: dict, today: date) -> str:
-    """12-month and all-time totals side by side, each centred in its half; six stats evenly spaced below."""
+    """Lines of code and files side by side, each centred in its half; six stats evenly spaced below."""
     mid = WIDTH / 2
     left, right, cell = mid - 190, mid + 190, (RIGHT - MARGIN) / 6
     cap = 'class="m up" y="134" font-size="13" letter-spacing="3" text-anchor="middle"'  # x +1.5: trailing tracking
@@ -470,14 +533,14 @@ def render_stats(stats: Stats, t: dict, today: date) -> str:
         # 18 x 0.53/0.4 renders 24px VT323, the same size as the typing line
         f'<text class="m" x="{MARGIN + cell * (i + 0.5):g}" y="216" font-size="18" text-anchor="middle">{value}</text></g>'
         for i, (label, value) in enumerate(stat_row(stats, today)))
-    body = f"""{kicker(t, "TOTAL CONTRIBUTIONS", mid, "middle")}
-{count_up(t, stats.last_year, left, 106)}{count_up(t, stats.all_time, right, 106, fmt_k, start=0.3)}
-<text {cap} x="{left + 1.5:g}" fill="{t['ta1']}"{delay(0.9)}>LAST 12 MONTHS</text>
-<text {cap} x="{right + 1.5:g}" fill="{t['ta2']}"{delay(0.9)}>ALL-TIME</text>
+    body = f"""{kicker(t, "TOTAL CODE", mid, "middle")}
+{count_up(t, stats.loc, left, 106, fmt_k)}{count_up(t, stats.files, right, 106, start=0.3)}
+<text {cap} x="{left + 1.5:g}" fill="{t['ta1']}"{delay(0.9)}>LINES OF CODE</text>
+<text {cap} x="{right + 1.5:g}" fill="{t['ta2']}"{delay(0.9)}>FILES</text>
 {gradient("gv", t["gstops"], vertical=True)}<rect x="{mid:g}" y="63" width="1" height="74" fill="url(#gv)" opacity=".8"/>
 <rect x="{MARGIN}" y="160" width="{RIGHT - MARGIN}" height="1" fill="{t['border']}"/>
 {row}"""
-    title = (f"{stats.last_year:,} contributions in the last 12 months, {stats.all_time:,} all-time. "
+    title = (f"{stats.loc:,} lines of code in {stats.files:,} files across {stats.repos} original repos. "
              + ", ".join(f"{label.lower()} {value}" for label, value in stat_row(stats, today)) + ".")
     return svg(248, t, body, title, frozenset({("Audiowide", 400), ("VT323", 400)}))
 
@@ -532,7 +595,7 @@ def main() -> None:
     stats = fetch_stats(token)
     for name, content in render_all(stats, datetime.now(UTC).date()).items():
         (out_dir / name).write_text(content, encoding="utf-8")
-    print(f"wrote {out_dir}: {stats.last_year} last-year, {stats.all_time} all-time, {stats.commits} commits, {stats.repos} repos")
+    print(f"wrote {out_dir}: {stats.last_year} last-year, {stats.all_time} all-time, {stats.commits} commits, {stats.files} files, {stats.loc} loc, {stats.repos} repos")
 
 
 if __name__ == "__main__":

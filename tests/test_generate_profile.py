@@ -25,6 +25,8 @@ def stats() -> gp.Stats:
         commits=10_632,
         prs=477,
         issues=119,
+        files=4_321,
+        loc=1_234_567,
         repos=69,
         days=tuple([0] * 300 + [3] * 64 + [0]),  # 64-day streak; today still at zero
         languages=(("Python", "#3572A5", 47.4), ("Rust", "#dea584", 23.1), ("C", "#555555", 29.5)),
@@ -36,7 +38,7 @@ def cards(stats: gp.Stats) -> dict[str, str]:
     return gp.render_all(stats, TODAY)
 
 
-@pytest.mark.parametrize(("n", "expected"), [(0, "0"), (999, "999"), (1000, "1k"), (10_632, "10.6k"), (27_197, "27.2k")])
+@pytest.mark.parametrize(("n", "expected"), [(0, "0"), (999, "999"), (1000, "1k"), (10_632, "10.6k"), (27_197, "27.2k"), (1_000_000, "1M"), (1_234_567, "1.2M")])
 def test_fmt_k(n: int, expected: str) -> None:
     assert gp.fmt_k(n) == expected
 
@@ -95,10 +97,18 @@ def test_stats_row_shows_real_commits_not_stars(stats: gp.Stats) -> None:
     assert list(row) == ["STREAK", "PRS", "ISSUES", "REPOS", "COMMITS", "UPTIME"]
 
 
-def test_stats_card_shows_both_totals(cards: dict[str, str]) -> None:
+def test_stats_card_shows_code_totals(cards: dict[str, str]) -> None:
     svg = cards["stats.svg"]
-    assert ">15,747</text>" in svg and ">27.2k</text>" in svg
-    assert "LAST 12 MONTHS" in svg and "ALL-TIME" in svg
+    assert ">1.2M</text>" in svg and ">4,321</text>" in svg
+    assert "LINES OF CODE" in svg and ">FILES<" in svg and "TOTAL CODE" in svg
+    assert "LAST 12 MONTHS" not in svg  # captions must describe what the numbers are
+
+
+def test_sum_scc_counts_only_source() -> None:
+    rows = [{"Name": "Python", "Count": 10, "Code": 900}, {"Name": "Rust", "Count": 5, "Code": 400},
+            {"Name": "JSON", "Count": 50, "Code": 99_999}, {"Name": "Markdown", "Count": 7, "Code": 300},
+            {"Name": "HTML", "Count": 3, "Code": 5_000}]
+    assert gp.sum_scc(rows) == (15, 1_300)
 
 
 def test_header_has_subtitle_and_no_kicker(cards: dict[str, str]) -> None:
@@ -171,3 +181,16 @@ def test_graphql_fails_fast_on_auth_errors(monkeypatch: pytest.MonkeyPatch) -> N
     with pytest.raises(Exception, match="boom"):
         gp.graphql("t", "q")
     assert len(calls) == 1
+
+
+def test_clone_failures_never_echo_secrets_or_names(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str],
+                                                     tmp_path: Path) -> None:
+    import subprocess
+
+    def boom(cmd: list[str], **kw: object) -> None:
+        raise subprocess.TimeoutExpired(cmd + ["SECRET-TOKEN", "private-repo-name"], 300)
+
+    monkeypatch.setattr(gp.subprocess, "run", boom)
+    assert gp._checkout_small_files("https://github.com/o/private-repo-name.git", tmp_path / "0", {}) is False
+    out = capsys.readouterr()
+    assert "SECRET" not in out.out + out.err and "private-repo-name" not in out.out + out.err
