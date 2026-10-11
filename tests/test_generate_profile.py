@@ -1,5 +1,6 @@
 """Offline tests for the profile card generator (no network, fixed data)."""
 
+import itertools
 import sys
 import xml.etree.ElementTree as ET
 from datetime import date
@@ -194,3 +195,30 @@ def test_clone_failures_never_echo_secrets_or_names(monkeypatch: pytest.MonkeyPa
     assert gp._checkout_small_files("https://github.com/o/private-repo-name.git", tmp_path / "0", {}) is False
     out = capsys.readouterr()
     assert "SECRET" not in out.out + out.err and "private-repo-name" not in out.out + out.err
+
+
+def test_apca_matches_reference_values() -> None:
+    assert gp.apca("#000000", "#ffffff") == pytest.approx(106.04, abs=0.1)  # APCA 0.0.98G published values
+    assert gp.apca("#ffffff", "#000000") == pytest.approx(107.88, abs=0.1)
+    assert gp.apca("#777777", "#777777") == 0
+
+
+def test_text_tokens_meet_apca_floors() -> None:
+    surfaces = gp.surfaces(gp.THEME)
+    for key in ("fg", "muted", "ta1", "ta2"):
+        assert min(gp.apca(gp.THEME[key], s) for s in surfaces) >= gp.APCA_FLOOR[key], key
+    assert min(gp.apca(c, s) for c in gp.THEME["gstops"] for s in surfaces) >= gp.APCA_FLOOR["display"]
+
+
+def test_gradient_lightness_rises_without_a_dip() -> None:
+    stops = gp.oklch_stops("#ff2fd6", "#00f0ff", 9)
+    assert stops[0] == "#ff2fd6" and stops[-1] == "#00f0ff"
+    lightness = [gp._oklab(c)[0] for c in stops]
+    assert all(b >= a for a, b in itertools.pairwise(lightness))  # sRGB blending dips 0.69 -> 0.65
+
+
+def test_modern_css_is_emitted(cards: dict[str, str]) -> None:
+    css = cards["stats.svg"]
+    assert "prefers-contrast:more" in css and "font-display:block" in css
+    assert "translateY(" not in css and "scaleX(" not in css  # individual transform properties instead
+    assert "linear(0," in css and "cubic-bezier(.2,.8,.2,1)" in css  # spring with a fallback

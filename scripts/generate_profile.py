@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import base64
 import json
+import math
 import os
 import shutil
 import subprocess
@@ -36,8 +37,12 @@ KICKER_Y = 44  # shared baseline for every card's label
 FONT_DIR = Path(__file__).resolve().parent.parent / "fonts"  # OFL woff2 files embedded into SVGs
 SANS = "-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif"
 MONO = "ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace"
+# APCA |Lc| floors by role: body-size text, the 17px subtitle, short uppercase labels, 44-56px display numbers.
+APCA_FLOOR = {"fg": 90, "muted": 70, "ta1": 60, "ta2": 60, "display": 45}
 AA, AA_LARGE = 4.5, 3.0  # WCAG 2.x contrast minimums: body text, large text / meaningful graphics
 GLOW = ' filter="url(#glow)"'
+# Bars grow with a ~3% spring overshoot; browsers without linear() keep the cubic-bezier declared before it.
+SPRING = "linear(0,.25 9%,.6 20%,.92 33%,1.03 45%,1.035 52%,1.01 66%,.998 80%,1)"
 RETRIES = 3  # transient network/API failures; a failed run leaves yesterday's cards up
 DISPLAY_ADV = {"0": 0.925, "1": 0.354, "2": 0.752, "3": 0.719, "4": 0.773, "5": 0.75, "6": 0.744, "7": 0.641,
                "8": 0.746, "9": 0.744, ",": 0.225, ".": 0.205, "k": 0.691, "M": 0.962}  # Audiowide advances (em), measured with fonttools
@@ -65,17 +70,67 @@ def contrast(a: str, b: str) -> float:
     return (hi + 0.05) / (lo + 0.05)
 
 
-def readable(color: str, surfaces: list[str], ratio: float) -> str:
-    """Nudge a colour toward white (dark UI) or black (light UI) until it meets
-    `ratio` against every surface; keeps the hue as far as possible."""
+def apca(text: str, bg: str) -> float:
+    """APCA 0.0.98G lightness contrast |Lc| (the WCAG 3 candidate); WCAG 2 ratios overrate dark-mode contrast."""
+    def y(c: str) -> float:
+        r, g, b = (int(c[i:i + 2], 16) / 255 for i in (1, 3, 5))
+        v = 0.2126729 * r ** 2.4 + 0.7151522 * g ** 2.4 + 0.0721750 * b ** 2.4
+        return v + (0.022 - v) ** 1.414 if v < 0.022 else v
+    yt, yb = y(text), y(bg)
+    if yb > yt:  # dark text on light
+        s = (yb ** 0.56 - yt ** 0.57) * 1.14
+        return 0.0 if s < 0.1 else (s - 0.027) * 100
+    s = (yb ** 0.65 - yt ** 0.62) * 1.14
+    return 0.0 if s > -0.1 else -(s + 0.027) * 100
+
+
+def readable(color: str, surfaces: list[str], ratio: float, lc: float = 0) -> str:
+    """Nudge a colour toward white (dark UI) or black (light UI) until it meets the WCAG 2 `ratio` and the APCA
+    `lc` floor against every surface; keeps the hue as far as possible."""
     target = 255 if sum(map(luminance, surfaces)) / len(surfaces) < 0.4 else 0
     rgb = [int(color[i:i + 2], 16) for i in (1, 3, 5)]
     mixed = color
-    for step in range(21):
-        mixed = "#" + "".join(f"{round(c + (target - c) * step / 20):02x}" for c in rgb)
-        if min(contrast(mixed, s) for s in surfaces) >= ratio:
+    for step in range(41):
+        mixed = "#" + "".join(f"{round(c + (target - c) * step / 40):02x}" for c in rgb)
+        if all(contrast(mixed, s) >= ratio and apca(mixed, s) >= lc for s in surfaces):
             return mixed
     return mixed
+
+
+def _oklab(c: str) -> tuple[float, float, float]:
+    lin = [((v + 0.055) / 1.055) ** 2.4 if v > 0.04045 else v / 12.92 for v in (int(c[i:i + 2], 16) / 255 for i in (1, 3, 5))]
+    lms = [sum(m * v for m, v in zip(row, lin, strict=True)) ** (1 / 3) for row in
+           ((0.4122214708, 0.5363325363, 0.0514459929), (0.2119034982, 0.6806995451, 0.1073969566),
+            (0.0883024619, 0.2817188376, 0.6299787005))]
+    l_, m_, s_ = lms
+    return (0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_,
+            1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_,
+            0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_)
+
+
+def _hex(lab: tuple[float, float, float]) -> str:
+    L, a, b = lab
+    l_, m_, s_ = (L + 0.3963377774 * a + 0.2158037573 * b, L - 0.1055613458 * a - 0.0638541728 * b,
+                  L - 0.0894841775 * a - 1.2914855480 * b)
+    l, m, s = l_ ** 3, m_ ** 3, s_ ** 3
+    lin = (4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s, -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+           -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s)
+    srgb = [1.055 * max(v, 0) ** (1 / 2.4) - 0.055 if v > 0.0031308 else 12.92 * v for v in lin]
+    return "#" + "".join(f"{round(min(max(v, 0), 1) * 255):02x}" for v in srgb)
+
+
+def oklch_stops(a: str, b: str, n: int = 5) -> list[str]:
+    """Gradient stops interpolated in OKLCH along the shorter hue arc. Plain sRGB blending (all SVG reliably
+    does) dips darker in the first half of pink->cyan; the OKLCH ramp brightens evenly from end to end."""
+    (la, aa, ba), (lb, ab, bb) = _oklab(a), _oklab(b)
+    ca, cb, ha, hb = math.hypot(aa, ba), math.hypot(ab, bb), math.atan2(ba, aa), math.atan2(bb, ab)
+    dh = (hb - ha + math.pi) % (2 * math.pi) - math.pi
+    out = []
+    for k in range(n):
+        f = k / (n - 1)
+        c, h = ca + (cb - ca) * f, ha + dh * f
+        out.append(_hex((la + (lb - la) * f, c * math.cos(h), c * math.sin(h))))
+    return out
 
 
 def surfaces(t: dict) -> list[str]:
@@ -83,11 +138,12 @@ def surfaces(t: dict) -> list[str]:
 
 
 def theme(**kw: Any) -> dict[str, Any]:
-    """Palette plus text-only tokens derived to pass WCAG AA on every surface. Decorative colours are untouched."""
+    """Palette plus text-only tokens derived to pass WCAG 2 AA and an APCA floor on every surface. Decorative
+    colours (stripes, mountains, bars) are untouched."""
     t = dict(kw)
     for key, src in (("fg", "fg"), ("muted", "muted"), ("ta1", "a1"), ("ta2", "a2")):
-        t[key] = readable(t[src], surfaces(t), AA)
-    t["gstops"] = tuple(readable(c, surfaces(t), AA_LARGE) for c in (t["g1"], t["g2"]))
+        t[key] = readable(t[src], surfaces(t), AA, APCA_FLOOR[key])
+    t["gstops"] = tuple(readable(c, surfaces(t), AA_LARGE, APCA_FLOOR["display"]) for c in oklch_stops(t["g1"], t["g2"]))
     return t
 
 
@@ -302,13 +358,14 @@ def svg(height: int, t: dict, body: str, title: str, faces: frozenset[tuple[str,
 <style>
 {font_faces(t, faces)}
 .m{{font-family:{t['font_mono']};font-size-adjust:0.53}} .ty{{font-size-adjust:none}} .mu{{fill:{t['muted']}}} .rm{{display:none}}
-@keyframes up{{from{{opacity:0;transform:translateY(8px)}}}}
-@keyframes wide{{from{{transform:scaleX(0)}}}}
+@keyframes up{{from{{opacity:0;translate:0 8px}}}}
+@keyframes wide{{from{{scale:0 1}}}}
 @keyframes on{{from{{opacity:0}}}}
 @keyframes flash{{0%,100%{{opacity:1}}}}
 .up{{animation:up .6s cubic-bezier(.2,.8,.2,1) both}} .on{{animation:on 0s linear both}}
-.wide{{transform-box:fill-box;transform-origin:left;animation:wide .9s cubic-bezier(.2,.8,.2,1) both}}
+.wide{{transform-box:fill-box;transform-origin:left;animation:wide .9s cubic-bezier(.2,.8,.2,1) both;animation-timing-function:{SPRING}}}
 @media (prefers-reduced-motion:reduce){{*{{animation:none!important}} .tw{{display:none}} .rm{{display:inline}}}}
+@media (prefers-contrast:more){{.mu{{fill:{t['fg']}}} [filter]{{filter:none}}}}
 </style>
 <defs>{gradient("g", t["gstops"])}
 {gradient("bgg", (t["bg"], t["bg2"]), vertical=True)}
@@ -327,7 +384,7 @@ def svg(height: int, t: dict, body: str, title: str, faces: frozenset[tuple[str,
 def font_faces(t: dict, faces: frozenset[tuple[str, int]]) -> str:
     """@font-face rules with the woff2 inlined (<img>-rendered SVG can't fetch fonts); only the faces a card uses."""
     return "".join(
-        f"@font-face{{font-family:'{family}';font-weight:{weight};font-style:normal;"
+        f"@font-face{{font-family:'{family}';font-weight:{weight};font-style:normal;font-display:block;"
         f"src:url(data:font/woff2;base64,{base64.b64encode((FONT_DIR / file).read_bytes()).decode()}) format('woff2')}}"
         for family, weight, file in t["fonts"] if (family, weight) in faces
     )
@@ -362,7 +419,7 @@ def sun(t: dict, cx: float, cy: float, r: float) -> str:
     """Striped retro sun; stripes scroll down through the lower half."""
     stripes = "".join(f'<rect x="{cx - r}" y="{y}" width="{2 * r}" height="{2 + (y - cy) / 14:.1f}" fill="{t["bg2"]}"/>'
                       for y in range(int(cy) + 10, int(cy + r) + 24, 12))
-    return ("<style>@keyframes slide{to{transform:translateY(12px)}}</style>"
+    return ("<style>@keyframes slide{to{translate:0 12px}}</style>"
             f'{gradient("sun", ("#ffd319", t["a2"]), vertical=True)}<clipPath id="sc"><circle cx="{cx}" cy="{cy}" r="{r}"/></clipPath>'
             f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="url(#sun)"{GLOW}/>'
             f'<g clip-path="url(#sc)"><g style="animation:slide 1.6s linear infinite">{stripes}</g></g>')
@@ -373,7 +430,7 @@ def floor(t: dict, x0: float, horizon: float, vx: float, gap: int = 10, ray: int
     rays = "".join(f'<line x1="{vx}" y1="{horizon}" x2="{vx + dx}" y2="200"/>' for dx in range(-1200, 1201, ray))
     rows = "".join(f'<line x1="{x0}" y1="{y}" x2="{WIDTH}" y2="{y}"/>' for y in range(int(horizon), 202 + gap, gap))
     h = 200 - horizon
-    return (f"<style>@keyframes floor{{to{{transform:translateY({gap}px)}}}}</style>"
+    return (f"<style>@keyframes floor{{to{{translate:0 {gap}px}}}}</style>"
             f'<clipPath id="fc"><rect x="{x0}" y="{horizon}" width="{WIDTH - x0}" height="{h}"/></clipPath>'
             f'<g clip-path="url(#fc)"><rect x="{x0}" y="{horizon}" width="{WIDTH - x0}" height="{h}" fill="{t["bg2"]}"/>'
             f'<g stroke-opacity=".7"><g stroke="{t["a2"]}">{rays}</g>'
