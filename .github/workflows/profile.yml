@@ -19,6 +19,7 @@ jobs:
   cards:
     name: Render stat cards
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
         with:
@@ -26,6 +27,10 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
+      - name: Test the generator # a failing test stops the run before any card is committed
+        run: |
+          python -m pip install --quiet pytest
+          python -m pytest -q
       - name: Generate SVGs from live GitHub data
         run: python scripts/generate_profile.py assets
         env:
@@ -35,4 +40,4 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add assets
-          git diff --cached --quiet || { git commit -m "chore: refresh profile cards" && git push; }
+          git diff --cached --quiet || { git commit -m "chore: refresh profile cards" && git pull --rebase --quiet && git push; }
