@@ -12,6 +12,8 @@ import base64
 import json
 import os
 import sys
+import time
+import urllib.error
 import urllib.request
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
@@ -33,6 +35,7 @@ SANS = "-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif"
 MONO = "ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace"
 AA, AA_LARGE = 4.5, 3.0  # WCAG 2.x contrast minimums: body text, large text / meaningful graphics
 GLOW = ' filter="url(#glow)"'
+RETRIES = 3  # transient network/API failures; a failed run leaves yesterday's cards up
 DISPLAY_ADV = {"0": 0.925, "1": 0.354, "2": 0.752, "3": 0.719, "4": 0.773, "5": 0.75, "6": 0.744, "7": 0.641,
                "8": 0.746, "9": 0.744, ",": 0.225, ".": 0.205, "k": 0.691}  # Audiowide advances (em), measured with fonttools
 TAGLINE = "I build, launch, and grow new ventures."
@@ -119,8 +122,19 @@ def graphql(token: str, query: str, **variables: object) -> dict:
         data=json.dumps({"query": query, "variables": variables}).encode(),
         headers={"Authorization": f"bearer {token}", "User-Agent": LOGIN},
     )
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        body = json.load(resp)
+    body: dict = {}
+    for attempt in range(RETRIES):
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                body = json.load(resp)
+            break
+        except urllib.error.HTTPError as err:  # 5xx/rate-limit blips retry; auth or query errors fail fast
+            if (err.code < 500 and err.code != 429) or attempt == RETRIES - 1:
+                raise
+        except (urllib.error.URLError, TimeoutError):
+            if attempt == RETRIES - 1:
+                raise
+        time.sleep(2 ** attempt * 5)
     if body.get("errors"):
         raise RuntimeError(f"GraphQL error: {body['errors']}")
     return body["data"]["user"]

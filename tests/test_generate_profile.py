@@ -4,6 +4,7 @@ import sys
 import xml.etree.ElementTree as ET
 from datetime import date
 from pathlib import Path
+from typing import Self
 
 import pytest
 
@@ -121,3 +122,52 @@ def test_private_repo_names_never_leave_fetch(cards: dict[str, str]) -> None:
     # Only aggregate language names are rendered; the fixture has no repo names, and no card should invent any.
     for svg in cards.values():
         assert "nameWithOwner" not in svg
+
+
+class _Resp:
+    def __init__(self, payload: bytes) -> None:
+        self.payload = payload
+
+    def __enter__(self) -> Self:
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        return None
+
+    def read(self) -> bytes:
+        return self.payload
+
+
+def _http_error(code: int) -> Exception:
+    import urllib.error
+
+    return urllib.error.HTTPError(gp.API, code, "boom", {}, None)  # type: ignore[arg-type]
+
+
+def test_graphql_retries_transient_failures(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = []
+
+    def fake_urlopen(req: object, timeout: int) -> _Resp:
+        calls.append(1)
+        if len(calls) < 3:
+            raise _http_error(502)
+        return _Resp(b'{"data": {"user": {"ok": true}}}')
+
+    monkeypatch.setattr(gp.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(gp.time, "sleep", lambda s: None)
+    assert gp.graphql("t", "q") == {"ok": True}
+    assert len(calls) == 3
+
+
+def test_graphql_fails_fast_on_auth_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = []
+
+    def fake_urlopen(req: object, timeout: int) -> _Resp:
+        calls.append(1)
+        raise _http_error(401)
+
+    monkeypatch.setattr(gp.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(gp.time, "sleep", lambda s: None)
+    with pytest.raises(Exception, match="boom"):
+        gp.graphql("t", "q")
+    assert len(calls) == 1
